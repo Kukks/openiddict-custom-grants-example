@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using openiddicttest.Models;
+using openiddict_test.Contracts;
+using openiddict_test.Services;
 
 namespace openiddicttest
 {
@@ -28,6 +30,11 @@ namespace openiddicttest
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
+
+            services.AddTransient<IAuthorizationService, AuthorizationService>();
+            services.AddTransient<IOpenIdGrantHandler, PasswordGrantFlowHandler>();
+            services.AddTransient<IOpenIdGrantHandler, FacebookGrantFlowHandler>();
+
             // add OpenIddict
             services.AddOpenIddict<ApplicationUser, ApplicationRole, ApplicationDbContext>()
                 .DisableHttpsRequirement()
@@ -35,8 +42,11 @@ namespace openiddicttest
                 .AllowPasswordFlow()
                 .AllowRefreshTokenFlow()
                 .UseJsonWebTokens()
+                //.AllowCustomFlow(FacebookGrantFlowHandler.Test)
                 .AddEphemeralSigningKey();
 
+
+            
             // assuming you have an api...
             services.AddMvc();
 
