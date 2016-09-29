@@ -58,7 +58,7 @@ namespace openiddict_test.Services
 
             if (_userManager.SupportsUserLockout)
             {
-                _userManager.ResetAccessFailedCountAsync(user).RunSynchronously();
+                _userManager.ResetAccessFailedCountAsync(user);
             }
             var identity = _userManager.CreateIdentityAsync(user, connectRequest.GetScopes()).Result;
 

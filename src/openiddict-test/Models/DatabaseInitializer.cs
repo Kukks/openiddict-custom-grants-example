@@ -50,7 +50,7 @@ namespace openiddicttest
                 _context.SaveChanges();
             }
 
-            var email = "user@test.com";
+            var email = "evilkukka@gmail.com";
             ApplicationUser user;
             if (await _userManager.FindByEmailAsync(email) == null)
             {

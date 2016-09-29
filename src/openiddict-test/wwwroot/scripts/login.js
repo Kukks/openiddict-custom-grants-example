@@ -2,12 +2,13 @@
 (function () {
     "use strict";
     angular.module("openiddicttest").controller("login", loginController);
-    loginController.$inject = ["authService"];
-    function loginController(authService) {
+    loginController.$inject = ["authService", '$rootScope'];
+    function loginController(authService, $rootScope) {
         var vm = this;
         vm.email = "user@test.com";
         vm.password = "P2ssw0rd!";
         vm.login = login;
+        vm.facebookLogin = facebookLogin;
 
         function login() {
             var user = { userName: vm.email, password: vm.password };
@@ -27,8 +28,13 @@
                 else
                     alert(err.error_description);
             });
+        };
+
+        function facebookLogin() {
+            debugger;
+            console.log($rootScope.user);
+
         }
-        ;
     }
     ;
 }());

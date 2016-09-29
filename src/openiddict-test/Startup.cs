@@ -34,6 +34,8 @@ namespace openiddicttest
             services.AddTransient<IAuthorizationService, AuthorizationService>();
             services.AddTransient<IOpenIdGrantHandler, PasswordGrantFlowHandler>();
             services.AddTransient<IOpenIdGrantHandler, FacebookGrantFlowHandler>();
+            services.AddTransient<ISocialService, FacebookService>();
+            services.AddTransient<FacebookService, FacebookService>();
 
             // add OpenIddict
             services.AddOpenIddict<ApplicationUser, ApplicationRole, ApplicationDbContext>()
@@ -42,7 +44,7 @@ namespace openiddicttest
                 .AllowPasswordFlow()
                 .AllowRefreshTokenFlow()
                 .UseJsonWebTokens()
-                //.AllowCustomFlow(FacebookGrantFlowHandler.Test)
+                .AllowCustomFlow(FacebookGrantFlowHandler.Test)
                 .AddEphemeralSigningKey();
 
 
@@ -86,7 +88,7 @@ namespace openiddicttest
             });
 
             // seed the database
-            databaseInitializer.Seed().GetAwaiter().GetResult();
+            //databaseInitializer.Seed().GetAwaiter().GetResult();
         }
     }
 }

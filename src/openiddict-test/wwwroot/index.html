@@ -6,10 +6,9 @@
 </head>
 <body>
     <h1>Get JWT token &amp; refresh token from OpenIddict</h1>
-    <p><strong>For an angular login page, <a href="/login.html">click here</a>.</strong></p>
     <div>
         <label>username</label>
-        <input id="username" value="user@test.com" />
+        <input id="username" value="evilkukka@gmail.com" />
     </div>
     <div>
         <label>password</label>
@@ -19,46 +18,67 @@
     <div>
         <button id="buttonToken">Get Token</button>
         <button id="buttonAPI">Get API Data</button>
+
+        <button id="facebook-login">FB Login</button>
+        <button  id="facebook-auth-login">Send FB token to auth server </button>
     </div>
     <h4>API Response</h4>
     <pre style="max-width:100%;white-space: normal;overflow-wrap:break-word;" id="apiresponse"></pre>
     <h4>Token Response</h4>
     <pre style="max-width:100%;white-space: normal;overflow-wrap:break-word;" id="response"></pre>
     <h4>Decoded Access Token</h4>
-    <pre style="max-width:100%;white-space: normal;overflow-wrap:break-word;" id="token"></pre>
-    <script>
-        var baseUrl = window.location.protocol + "//" + window.location.host + "/";
+<pre style="max-width: 100%; white-space: normal; overflow-wrap: break-word;" id="token"></pre>
+    
 
-        document.getElementById("buttonToken").addEventListener("click", getToken, false);
-        document.getElementById("buttonAPI").addEventListener("click", getAPI, false);
+    <h4>Facebook</h4>
+<pre style="max-width: 100%; white-space: normal; overflow-wrap: break-word;" id="fb-response"></pre>
 
-        function getAPI() {
-            document.getElementById("apiresponse").innerText = "loading...";
+<script>
+    var baseUrl = window.location.protocol + "//" + window.location.host + "/";
 
-            var xhr = new XMLHttpRequest();
-            xhr.onload = function (e) {
-                document.getElementById("apiresponse").innerText = xhr.status + ": " + xhr.response;
+    document.getElementById("buttonToken").addEventListener("click", getToken, false);
+    document.getElementById("buttonAPI").addEventListener("click", getAPI, false);
+    document.getElementById("facebook-login").addEventListener("click", facebookLogin, false);
+    document.getElementById("facebook-auth-login").addEventListener("click", facebookAuthLogin, false);
+
+    function facebookLogin() {
+        FB.getLoginStatus(function (response) {
+            if (response.status === 'connected') {
+                document.getElementById("fb-response").innerText = JSON.stringify(response);
+                console.log('Logged in.');
+                window.fbResponse = response;
             }
-
-            xhr.open("GET", baseUrl + "api/test");
-
-            var data = document.getElementById("response").innerText;
-            document.getElementById("apiresponse").innerText = "loading...";
-            if (data !== "") {
-                var response = JSON.parse(data);
-                xhr.setRequestHeader("Authorization", "Bearer " + response.access_token);
+            else {
+                FB.login();
+                document.getElementById("fb-response").innerText = "loading...";
             }
-            xhr.send();
+        });
+    }
+
+    function getAPI() {
+        document.getElementById("apiresponse").innerText = "loading...";
+
+        var xhr = new XMLHttpRequest();
+        xhr.onload = function(e) {
+            document.getElementById("apiresponse").innerText = xhr.status + ": " + xhr.response;
         }
 
-        function getToken() {
-            var uid = document.getElementById("username").value;
-            var pwd = document.getElementById("password").value;
+        xhr.open("GET", baseUrl + "api/test");
 
-            document.getElementById("response").innerText = "loading...";
-            document.getElementById("token").innerText = "loading...";
+        var data = document.getElementById("response").innerText;
+        document.getElementById("apiresponse").innerText = "loading...";
+        if (data !== "") {
+            var response = JSON.parse(data);
+            xhr.setRequestHeader("Authorization", "Bearer " + response.access_token);
+        }
+        xhr.send();
+    }
+
+    function facebookAuthLogin() {
+        if (window.fbResponse && window.fbResponse.authResponse && window.fbResponse.authResponse.accessToken) {
+
             document.getElementById("apiresponse").innerText = "";
-
+            document.getElementById("response").innerText = "loading...";
             var xhr = new XMLHttpRequest();
             xhr.onload = function (e) {
 
@@ -70,9 +90,8 @@
 
             xhr.open("POST", baseUrl + "connect/token");
             var data = {
-                username: uid,
-                password: pwd,
-                grant_type: "password",
+                assertion: window.fbResponse.authResponse.accessToken,
+                grant_type: "facebook_access_token",
                 // specify the resource, to match the audience in the jwt bearer middleware
                 resource: "http://localhost:58292/",
                 // offline_access: indicate refresh token is required
@@ -90,35 +109,112 @@
             }
             xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
             xhr.send(body);
+
+
+
+        }
+    }
+
+    function getToken() {
+        var uid = document.getElementById("username").value;
+        var pwd = document.getElementById("password").value;
+
+        document.getElementById("response").innerText = "loading...";
+        document.getElementById("token").innerText = "loading...";
+        document.getElementById("apiresponse").innerText = "";
+
+        var xhr = new XMLHttpRequest();
+        xhr.onload = function(e) {
+
+            document.getElementById("response").innerText = xhr.response === "" ? "Failed" : xhr.response;
+            var decodedToken = xhr.response === "" ? "" : decodeToken(JSON.parse(xhr.response).access_token);
+            document.getElementById("token").innerText = decodedToken === "" ? "" : JSON.stringify(decodedToken);
+
         }
 
-        function decodeToken(token) {
-            var parts = token.split('.');
-
-            if (parts.length !== 3) {
-                throw new Error('JWT must have 3 parts');
+        xhr.open("POST", baseUrl + "connect/token");
+        var data = {
+            username: uid,
+            password: pwd,
+            grant_type: "password",
+            // specify the resource, to match the audience in the jwt bearer middleware
+            resource: "http://localhost:58292/",
+            // offline_access: indicate refresh token is required
+            // profile: include custom fields
+            // email: include email address
+            scope: "offline_access profile email roles"
+        };
+        var body = "";
+        for (var key in data) {
+            if (body.length) {
+                body += "&";
             }
+            body += key + "=";
+            body += encodeURIComponent(data[key]);
+        }
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.send(body);
+    }
 
-            var decoded = urlBase64Decode(parts[1]);
-            if (!decoded) {
-                throw new Error('Cannot decode the token');
-            }
+    function decodeToken(token) {
+        var parts = token.split('.');
 
-            return JSON.parse(decoded);
+        if (parts.length !== 3) {
+            throw new Error('JWT must have 3 parts');
         }
 
-        function urlBase64Decode(str) {
-            var output = str.replace('-', '+').replace('_', '/');
-            switch (output.length % 4) {
-                case 0: { break; }
-                case 2: { output += '=='; break; }
-                case 3: { output += '='; break; }
-                default: {
-                    throw 'Illegal base64url string!';
-                }
-            }
-            return window.atob(output); //polifyll https://github.com/davidchambers/Base64.js
+        var decoded = urlBase64Decode(parts[1]);
+        if (!decoded) {
+            throw new Error('Cannot decode the token');
         }
+
+        return JSON.parse(decoded);
+    }
+
+    function urlBase64Decode(str) {
+        var output = str.replace('-', '+').replace('_', '/');
+        switch (output.length % 4) {
+        case 0:
+        {
+            break;
+        }
+        case 2:
+        {
+            output += '==';
+            break;
+        }
+        case 3:
+        {
+            output += '=';
+            break;
+        }
+        default:
+        {
+            throw 'Illegal base64url string!';
+        }
+        }
+        return window.atob(output); //polifyll https://github.com/davidchambers/Base64.js
+    }
+</script>
+
+
+    <script>
+  window.fbAsyncInit = function() {
+    FB.init({
+        appId: '445109092308979',
+      xfbml      : true,
+      version    : 'v2.7'
+    });
+    FB.AppEvents.logPageView();
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "//connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
     </script>
 </body>
 </html>
